@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const signs = (plan as PlanItem[]).filter((p) => p.type === "warningSign").map((w) => w.text);
     const isStart = !audioBase64 && !text;
 
-    const prompt = `You are Aide, a warm voice assistant doing a short daily check-in with ${patientName}, an older adult recently discharged from hospital.
+    const prompt = `You are Vela, a warm voice assistant doing a short daily check-in with ${patientName}, an older adult recently discharged from hospital.
 Speak ${LANG_NAME[language] || "English"} only. Short, simple sentences. One question at a time. Be kind and patient.
 Their confirmed medicines: ${meds.join("; ") || "none confirmed yet"}.
 Their discharge warning signs: ${signs.join("; ") || "none listed"}.
@@ -30,16 +30,16 @@ STRICT SAFETY RULES:
 - Ask whether they took each medicine today, and how they feel (breathing, swelling, chest, dizziness).
 - TEACH-BACK: once during the call, after confirming one medicine, ask them to say back when they take it. If wrong, gently restate it. Report "passed" or "failed" in "teachBack".
 - When meds, symptoms and teach-back are covered, thank them, say their caregiver and doctor will get a summary, and set "done": true.
-${isStart ? "- This is the START: introduce yourself ('I'm Aide, an assistant, not a doctor'), say they can say 'stop' anytime, then ask your first question." : ""}
+${isStart ? "- This is the START: introduce yourself ('I'm Vela, an assistant, not a doctor'), say they can say 'stop' anytime, then ask your first question." : ""}
 
 Conversation so far:
-${(history as Turn[]).map((t) => `${t.role === "aide" ? "Aide" : "Patient"}: ${t.text}`).join("\n") || "(none)"}
+${(history as Turn[]).map((t) => `${t.role === "aide" ? "Vela" : "Patient"}: ${t.text}`).join("\n") || "(none)"}
 ${isStart ? "" : audioBase64 ? "The patient's newest reply is the attached audio. Transcribe it exactly." : `Patient's newest reply: ${text}`}
 
 Return ONLY JSON:
 {"patientSaid": string (exact words of the newest reply in their language, "" at start),
  "patientSaidEnglish": string (English translation, "" at start),
- "reply": string (what Aide says next),
+ "reply": string (what Vela says next),
  "triage": {"level": "routine"|"urgent"|"emergency", "reason": string},
  "pharmacistQuestion": string|null,
  "teachBack": "passed"|"failed"|null,

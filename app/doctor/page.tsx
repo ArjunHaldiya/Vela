@@ -48,7 +48,7 @@ export default function Doctor() {
                 <summary className="cursor-pointer font-semibold">Transcript (original + English)</summary>
                 <ul className="mt-2 space-y-1 text-sm">
                   {c.transcript.map((t, i) => (
-                    <li key={i}><b>{t.role === "aide" ? "Aide" : "Patient"}:</b> {t.text}{t.english && t.english !== t.text && <span className="text-slate-500"> — [{t.english}]</span>}</li>
+                    <li key={i}><b>{t.role === "aide" ? "Vela" : "Patient"}:</b> {t.text}{t.english && t.english !== t.text && <span className="text-slate-500"> — [{t.english}]</span>}</li>
                   ))}
                 </ul>
               </details>

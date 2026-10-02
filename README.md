@@ -1,8 +1,8 @@
-# Aide V2 — a human-centered care companion
+# Vela V2 — a human-centered care companion
 
-**Aide drafts, checks in, and escalates. People decide.**
+**Vela drafts, checks in, and escalates. People decide.**
 
-Older adults leave the hospital with dense discharge papers, new medications and warning signs to watch for. Aide turns those papers into a plan, checks in with the patient by voice in their own language, and keeps the caregiver, the doctor and the pharmacy in the loop. A person confirms every step.
+Older adults leave the hospital with dense discharge papers, new medications and warning signs to watch for. Vela turns those papers into a plan, checks in with the patient by voice in their own language, and keeps the caregiver, the doctor and the pharmacy in the loop. A person confirms every step.
 
 ## Features
 - **Scan or type a prescription.** Lens-style scanning: Cloud Vision reads the text, **Gemma 4** structures it into medications, appointments, warning signs and the pharmacy, each with its source line.
@@ -22,7 +22,7 @@ Older adults leave the hospital with dense discharge papers, new medications and
 | Gemini (`gemini-flash-latest`, optionally via Vertex AI) | Check-in conversation, audio transcription, triage, summaries |
 | **Gemma 4** (`gemma-4-26b-a4b-it`) via the Gemini API | Structures prescriptions and discharge papers ([Gemma terms](https://ai.google.dev/gemma/terms)) |
 | Cloud Vision API | OCR for scanned documents |
-| Cloud Text-to-Speech | Aide's voice in English and Spanish |
+| Cloud Text-to-Speech | Vela's voice in English and Spanish |
 | Firebase Auth + Firestore | Roles, plan, live caregiver feed and alerts |
 | Cloud Run | Hosting, on the hackathon credits |
 | Gmail, Google Calendar, Google Maps | Human-approved emails, follow-up events, pharmacy directions |
@@ -30,10 +30,10 @@ Older adults leave the hospital with dense discharge papers, new medications and
 ## Safety and responsible AI
 1. Nothing goes live until a human confirms it.
 2. Every extracted item shows the exact line it came from.
-3. Aide reminds and escalates; it never diagnoses, changes a dose, or answers "should I take this?". Those questions go to an ask-your-pharmacist list.
+3. Vela reminds and escalates; it never diagnoses, changes a dose, or answers "should I take this?". Those questions go to an ask-your-pharmacist list.
 4. Red flags: rules first, AI second; the AI can only raise severity.
 5. Three levels: emergency (911 screen + caregiver alert), urgent (caregiver alert + doctor summary flagged), routine.
-6. Patient-controlled sharing; Aide identifies itself as an assistant, not a doctor; saying "stop" ends the check-in.
+6. Patient-controlled sharing; Vela identifies itself as an assistant, not a doctor; saying "stop" ends the check-in.
 7. Photos are not stored; only the structured plan is kept.
 
 **This is a prototype using synthetic data. It is not HIPAA-compliant.** Production path: Vertex AI under a Google Cloud BAA, role-based Firestore rules keyed on the consent map, audit logs, clinician review.

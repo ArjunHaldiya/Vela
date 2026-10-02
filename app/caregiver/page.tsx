@@ -85,7 +85,7 @@ export default function Caregiver() {
                     ? <p className="mt-2 font-semibold text-calm-700">You approved sending this to {patient.doctorName} at {new Date(c.emailApprovedAt).toLocaleTimeString()}</p>
                     : <a className="btn-primary mt-3 !text-xl" target="_blank" rel="noreferrer"
                         onClick={() => updateCheckin(c.id!, { emailApprovedAt: Date.now() })}
-                        href={gmailCompose(patient.doctorEmail, `[${c.severity.toUpperCase()}] Aide check-in: ${patient.name}`, `${c.doctorSummary}\n\nApproved and sent by ${me} (caregiver) via Aide.`)}>
+                        href={gmailCompose(patient.doctorEmail, `[${c.severity.toUpperCase()}] Vela check-in: ${patient.name}`, `${c.doctorSummary}\n\nApproved and sent by ${me} (caregiver) via Vela.`)}>
                         Approve & email {patient.doctorName} (Gmail)
                       </a>
                 )}
@@ -104,7 +104,7 @@ export default function Caregiver() {
         <div className="mt-3 flex flex-wrap gap-2">
           <a className="btn-small" href={telLink(ph.phone)}>Call</a>
           <a className="btn-small" target="_blank" rel="noreferrer" href={mapsLink(`${ph.name} ${ph.address || ""}`)}>Directions (Google Maps)</a>
-          {ph.email && <a className="btn-small" target="_blank" rel="noreferrer" href={gmailCompose(ph.email, `Medication list update: ${patient.name}`, `Hello ${ph.name},\n\nCurrent confirmed medication list for ${patient.name}:\n${liveMeds.map((m) => `- ${m.text} ${m.dose} ${m.frequency}`).join("\n")}\n\n${questions.length ? `Questions from the patient:\n${questions.map((q) => `- ${q}`).join("\n")}\n\n` : ""}Sent by ${me} via Aide`)}>Send med list (Gmail)</a>}
+          {ph.email && <a className="btn-small" target="_blank" rel="noreferrer" href={gmailCompose(ph.email, `Medication list update: ${patient.name}`, `Hello ${ph.name},\n\nCurrent confirmed medication list for ${patient.name}:\n${liveMeds.map((m) => `- ${m.text} ${m.dose} ${m.frequency}`).join("\n")}\n\n${questions.length ? `Questions from the patient:\n${questions.map((q) => `- ${q}`).join("\n")}\n\n` : ""}Sent by ${me} via Vela`)}>Send med list (Gmail)</a>}
         </div>
         {questions.length > 0 && (
           <div className="mt-4"><h3 className="font-bold">Ask-your-pharmacist list</h3><ul className="list-disc pl-6">{questions.map((q, i) => <li key={i}>{q}</li>)}</ul></div>

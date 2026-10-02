@@ -8,7 +8,7 @@ export default function RefillPopup({ low, patient, lang, onClose }: {
 }) {
   if (!low.length) return null;
   const ph = patient.pharmacy;
-  const body = `Hello ${ph.name},\n\nThis is a refill request for ${patient.name}:\n${low.map((l) => `- ${l.item.text} ${l.item.dose || ""} (${l.days} days left)`).join("\n")}\n\nPlease call ${patient.caregiverName} or the patient when it is ready.\n\nSent with Aide`;
+  const body = `Hello ${ph.name},\n\nThis is a refill request for ${patient.name}:\n${low.map((l) => `- ${l.item.text} ${l.item.dose || ""} (${l.days} days left)`).join("\n")}\n\nPlease call ${patient.caregiverName} or the patient when it is ready.\n\nSent with Vela`;
   return (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">

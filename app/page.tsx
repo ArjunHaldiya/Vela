@@ -8,8 +8,7 @@ export default function Home() {
   const [msg, setMsg] = useState("");
   return (
     <main className="mx-auto max-w-md p-6">
-      <h1 className="mt-6 text-5xl font-extrabold text-calm-700">Aide</h1>
-      <p className="mt-2 text-xl">Aide drafts, checks in, and escalates. <b>People decide.</b></p>
+      <p className="mt-6 text-xl">Vela drafts, checks in, and escalates. <b>People decide.</b></p>
       <div className="mt-8 grid gap-4">
         <Link href="/patient" className="btn-primary">I'm the patient</Link>
         <Link href="/caregiver" className="btn-secondary">I'm the caregiver</Link>

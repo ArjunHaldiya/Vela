@@ -8,7 +8,7 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const { transcript = [], severity = "routine", fired = [], patientName = "the patient", plan = [], pharmacistQuestions = [], teachBack = null } = await req.json();
-    const lines = (transcript as Turn[]).map((t) => `${t.role === "aide" ? "Aide" : "Patient"}: ${t.text}${t.english && t.english !== t.text ? `  [English: ${t.english}]` : ""}`).join("\n");
+    const lines = (transcript as Turn[]).map((t) => `${t.role === "aide" ? "Vela" : "Patient"}: ${t.text}${t.english && t.english !== t.text ? `  [English: ${t.english}]` : ""}`).join("\n");
     const drafts = plan.filter((p: any) => p.status === "draft" || p.status === "needsReview").map((p: any) => p.text);
 
     const out = await geminiJson(`Write two summaries of this check-in with ${patientName}. Use only facts in the transcript. Do not diagnose or recommend treatment.

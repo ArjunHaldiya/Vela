@@ -6,7 +6,7 @@ const inDays = (n: number, hour = 10) => { const d = new Date(Date.now() + n * 8
 // Synthetic patient. No real person or pharmacy.
 export const DEMO_PATIENT: Patient = {
   name: "Rosa Martinez",
-  language: "es",
+  language: "en",
   caregiverName: "Ana (daughter)",
   caregiverEmail: process.env.NEXT_PUBLIC_DEMO_CAREGIVER_EMAIL || "caregiver@example.com",
   doctorName: "Dr. Lee",
