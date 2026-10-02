@@ -26,7 +26,7 @@ async function transcribe(b64: string, mime: string): Promise<string> {
   return (await r.json()).text || "";
 }
 
-async function chat(model: string, parts: any[], json: boolean): Promise<string> {
+async function chat(model: string, parts: any[], json: boolean, temperature = 0.3): Promise<string> {
   const content: any[] = [];
   let hasImage = false;
   for (const p of parts) {
@@ -34,7 +34,7 @@ async function chat(model: string, parts: any[], json: boolean): Promise<string>
     else if (p.inlineData?.mimeType?.startsWith("image/")) {
       hasImage = true;
       content.push({ type: "image_url", image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` } });
-    } else if (p.inlineData) {
+    } else if (p.inlineData?.mimeType?.startsWith("audio/")) {
       const t = await transcribe(p.inlineData.data, p.inlineData.mimeType);
       content.push({ type: "text", text: `\nThe patient's audio reply, transcribed by Whisper: "${t}". Use this as their newest reply.` });
     }
@@ -42,7 +42,7 @@ async function chat(model: string, parts: any[], json: boolean): Promise<string>
   const body: any = {
     model: hasImage ? GEMMA_MODEL : model,
     messages: [{ role: "user", content: hasImage ? content : content.map((c) => c.text).join("\n") }],
-    temperature: 0.3,
+    temperature,
   };
   if (json && !hasImage) body.response_format = { type: "json_object" };
   return withRetry(async () => {
@@ -76,4 +76,13 @@ export function parseJson<T = any>(text: string | undefined): T {
 
 export async function geminiJson<T = any>(prompt: string, parts: any[] = []): Promise<T> {
   return parseJson<T>(await chat(GEMINI_MODEL, [{ text: prompt }, ...parts], true));
+}
+
+// Verbatim OCR with the Groq vision model, one page image at a time.
+export async function transcribeImage(data: string, mimeType: string): Promise<string> {
+  const text = await chat(GEMMA_MODEL, [
+    { text: "Transcribe ALL text in this document image exactly as written, line by line. Do not summarize, correct, or add anything. If a word is unreadable, write [unreadable]. Output only the transcription." },
+    { inlineData: { mimeType, data } },
+  ], false, 0);
+  return text.trim();
 }

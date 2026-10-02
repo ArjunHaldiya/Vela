@@ -64,7 +64,9 @@ export default function PatientHome() {
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div className="md:h-[72vh]"><DischargeInstructions patient={patient} plan={plan} lang={lang} /></div>
         <div className="md:h-[72vh]"><CareTimeline plan={plan} lang={lang} /></div>
-        <div className="md:h-[72vh]"><CareCall patient={patient} plan={plan} lang={lang} onEmergency={() => setEmergency(true)} /></div>
+        {/* Keyed by lang: switching languages restarts the call so the whole
+            conversation — not just turns after the switch — is in that language. */}
+        <div className="md:h-[72vh]"><CareCall key={lang} patient={patient} plan={plan} lang={lang} onEmergency={() => setEmergency(true)} /></div>
       </div>
 
       <section className="card mt-6 max-w-md">

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { GEMMA_MODEL, GEMINI_MODEL, gemmaClient, geminiClient, parseJson, transcribeImage, withRetry } from "@/lib/ai";import { PlanItem } from "@/lib/types";
+import { GEMMA_MODEL, GEMINI_MODEL, geminiClient, parseJson, transcribeImage } from "@/lib/ai";
+import { PlanItem } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -61,33 +62,42 @@ function verify(parsed: any, src: string): PlanItem[] {
   return items;
 }
 
+const MAX_PAGES = 5;
+
+// Accepts { text } or { images: [{ data, mimeType }] } (one per photo / PDF page).
+// The client turns PDFs into text or page images, since the models only take text and images.
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mimeType, text } = await req.json();
-    let source = (text || "").trim();
-        let ocr: "none" | "cloud-vision" | "gemini" = "none";
-    if (imageBase64 && !source) { source = await visionOcr(imageBase64); if (source) ocr = "cloud-vision"; }
-    if (imageBase64 && !source) {
-      try { source = await transcribeImage(imageBase64, mimeType || "image/jpeg"); if (source) ocr = "gemini"; }
-      catch (e) { console.warn("transcribe failed", e); }
-    }
+    const body = await req.json();
+    const images: { data: string; mimeType: string }[] = (body.images || (body.imageBase64 ? [{ data: body.imageBase64, mimeType: body.mimeType }] : []))
+      .slice(0, MAX_PAGES)
+      .map((im: any) => ({ data: im.data, mimeType: im.mimeType || "image/jpeg" }));
+    if (images.some((im) => !im.mimeType.startsWith("image/"))) return Response.json({ error: "Send PDFs as text or page images" }, { status: 400 });
 
+    let source = (body.text || "").trim();
+    let ocr: "none" | "cloud-vision" | "llama-vision" = "none";
+    if (!source && images.length) {
+      const pages: string[] = [];
+      for (const im of images) {
+        let t = await visionOcr(im.data);
+        if (t) ocr = "cloud-vision";
+        else {
+          try { t = await transcribeImage(im.data, im.mimeType); if (t && ocr === "none") ocr = "llama-vision"; }
+          catch (e) { console.warn("transcribe failed", e); }
+        }
+        if (t) pages.push(t);
+      }
+      source = pages.join("\n\n").trim();
+    }
+    if (!source && !images.length) return Response.json({ error: "Nothing to read" }, { status: 400 });
+
+    // With OCR text, the text model extracts (JSON mode). Without it, the vision model reads the first page directly.
     const parts: any[] = [{ text: PROMPT + (source ? `\n\nDOCUMENT TEXT:\n${source}` : "\n\nThe document is the attached image.") }];
-    if (imageBase64 && !source) parts.push({ inlineData: { mimeType: mimeType || "image/jpeg", data: imageBase64 } });
-
-    let modelUsed = GEMMA_MODEL, raw: string | undefined;
-    try {
-      const r = await gemmaClient().models.generateContent({ model: GEMMA_MODEL, contents: [{ role: "user", parts }] });
-      raw = r.text;
-      parseJson(raw);
-    } catch (e) {
-      console.warn("gemma failed, falling back to gemini", e);
-      modelUsed = GEMINI_MODEL;
-      const r = await geminiClient().models.generateContent({ model: GEMINI_MODEL, contents: [{ role: "user", parts }], config: { responseMimeType: "application/json" } });
-      raw = r.text;
-    }
-    const parsed = parseJson(raw);
-    return Response.json({ items: verify(parsed, source), pharmacy: parsed.pharmacy || null, modelUsed, ocrUsed, sourceText: source });
+    if (!source) parts.push({ inlineData: images[0] });
+    const modelUsed = source ? GEMINI_MODEL : GEMMA_MODEL;
+    const r = await geminiClient().models.generateContent({ model: GEMINI_MODEL, contents: [{ role: "user", parts }], config: { responseMimeType: "application/json" } });
+    const parsed = parseJson(r.text);
+    return Response.json({ items: verify(parsed, source), pharmacy: parsed.pharmacy || null, modelUsed, ocr, ocrUsed: ocr === "cloud-vision", sourceText: source });
   } catch (e: any) {
     console.error(e);
     return Response.json({ error: e?.message || "extract failed" }, { status: 500 });

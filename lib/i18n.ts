@@ -42,6 +42,7 @@ const S = {
   missed: { en: "Missed", es: "Omitido" },
   transcript: { en: "Transcript", es: "Transcripción" },
   velaSpeaking: { en: "Vela speaking", es: "Vela hablando" },
+  tapToHear: { en: "🔊 Tap to hear Vela", es: "🔊 Toque para escuchar a Vela" },
   listening: { en: "Listening…", es: "Escuchando…" },
   medicationBadge: { en: "Medication", es: "Medicamento" },
   followUpBadge: { en: "Follow-up", es: "Seguimiento" },

@@ -6,6 +6,11 @@ import { addPlanItems, savePatient } from "@/lib/store";
 import { SAMPLE_DISCHARGE_TEXT } from "@/lib/demo-data";
 import { PlanItem } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
+import { readPdf } from "@/lib/pdf";
+
+const toB64 = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(b); });
+const isText = (f: File) => f.type.startsWith("text/") || /\.(txt|md|csv)$/i.test(f.name);
+const isPdf = (f: File) => f.type === "application/pdf" || /\.pdf$/i.test(f.name);
 
 async function compress(file: File): Promise<{ data: string; mimeType: string }> {
   const img = await createImageBitmap(file);
@@ -24,7 +29,7 @@ export default function Scan() {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [result, setResult] = useState<{ items: PlanItem[]; pharmacy: any; modelUsed: string; ocrUsed: boolean } | null>(null);
+  const [result, setResult] = useState<{ items: PlanItem[]; pharmacy: any; modelUsed: string; ocr: string; ocrUsed: boolean } | null>(null);
   const [saved, setSaved] = useState(false);
 
   async function run(body: any) {
@@ -40,9 +45,32 @@ export default function Scan() {
 
   async function onFile(f?: File | null) {
     if (!f) return;
+    setErr(""); setResult(null); setPreview(null);
+    if (isText(f)) {
+      const t = await f.text();
+      setMode("type"); setText(t);
+      return run({ text: t });
+    }
+    if (isPdf(f)) {
+      setBusy(true);
+      try {
+        const content = await readPdf(f);
+        if ("text" in content) { setMode("type"); setText(content.text); }
+        else setPreview(`data:image/jpeg;base64,${content.images[0].data}`);
+        return run(content);
+      } catch (e) {
+        console.warn("pdf read failed", e);
+        setBusy(false);
+        return setErr("Couldn't open that PDF. Try taking a photo of the page instead.");
+      }
+    }
     setPreview(URL.createObjectURL(f));
-    const { data, mimeType } = await compress(f);
-    run({ imageBase64: data, mimeType });
+    try {
+      run({ images: [await compress(f)] });
+    } catch {
+      // Formats the browser can't decode (e.g. HEIC on some browsers): send the original.
+      run({ images: [{ data: await toB64(f), mimeType: f.type || "image/jpeg" }] });
+    }
   }
 
   async function save() {
@@ -66,12 +94,16 @@ export default function Scan() {
 
       {mode === "scan" ? (
         <div className="card mt-4">
-          <p className="text-lg">Point your camera at the discharge papers or the pill bottle label.</p>
+          <p className="text-lg">Point your camera at the discharge papers or the pill bottle label, or upload a photo, PDF or text file.</p>
           <label className="btn-primary mt-4 cursor-pointer">
             Take a photo
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
           </label>
-          <p className="mt-2 text-sm text-slate-500">Lens-style scanning: Google Cloud Vision reads the text, Gemma 4 builds the plan.</p>
+          <label className="btn-small mt-3 cursor-pointer">
+            Upload a file (photo, PDF or text)
+            <input type="file" accept="image/*,application/pdf,.pdf,text/plain,.txt,.md,.csv" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          <p className="mt-2 text-sm text-slate-500">PDFs with real text are read exactly; photos and scanned pages are read by Llama 4 vision (or Cloud Vision when configured).</p>
           {preview && <img src={preview} alt="Your scanned document" className="mt-4 max-h-64 w-full rounded-2xl object-contain" />}
         </div>
       ) : (
@@ -91,7 +123,7 @@ export default function Scan() {
       {result && (
         <section className="mt-6">
           <h2 className="text-2xl font-bold">Draft plan</h2>
-          <p className="text-base text-slate-600">Nothing is active until your caregiver confirms it. Read by {result.modelUsed}{result.ocrUsed ? " + Cloud Vision" : ""}.</p>
+          <p className="text-base text-slate-600">Nothing is active until your caregiver confirms it. Read by {result.modelUsed}{result.ocr === "cloud-vision" ? " + Cloud Vision" : result.ocr === "llama-vision" ? " + Llama vision OCR" : ""}.</p>
           <ul className="mt-3 grid gap-3">
             {result.items.map((it, i) => (
               <li key={i} className="card">

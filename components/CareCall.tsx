@@ -6,24 +6,6 @@ import { t } from "@/lib/i18n";
 
 const toB64 = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onloadend = () => res(String(r.result).split(",")[1]); r.readAsDataURL(b); });
 
-async function speak(text: string, lang: Lang, onDone: () => void) {
-  try {
-    const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, language: lang }) });
-    if (!r.ok) throw new Error("tts");
-    const { audioContent } = await r.json();
-    const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
-    audio.onended = onDone;
-    await audio.play();
-  } catch {
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang === "es" ? "es-US" : "en-US"; u.rate = 0.9;
-      u.onend = onDone;
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
-    } else onDone();
-  }
-}
-
 type DisplayTurn = Turn & { time: number };
 type CallStatus = "idle" | "speaking" | "listening" | "thinking";
 
@@ -41,6 +23,7 @@ export default function CareCall({ patient, plan, lang, onEmergency }: {
   const [teachBack, setTeachBack] = useState<"passed" | "failed" | null>(null);
   const [finished, setFinished] = useState(false);
   const [err, setErr] = useState("");
+  const [needsTapToHear, setNeedsTapToHear] = useState(false);
   const started = useRef(false);
   const alerted = useRef<Severity>("routine");
   const rec = useRef<MediaRecorder | null>(null);
@@ -48,8 +31,55 @@ export default function CareCall({ patient, plan, lang, onEmergency }: {
   const state = useRef({ turns, severity, fired, questions, teachBack });
   state.current = { turns, severity, fired, questions, teachBack };
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pendingAudio = useRef<HTMLAudioElement | null>(null);
+  const pendingUtterance = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
+
+  // Browsers block autoplay of audio/speech that isn't triggered by a direct user
+  // gesture, which the auto-started greeting and later agent replies are not. Try
+  // to play immediately; if that's blocked OR the speech-synthesis fallback itself
+  // misbehaves (some browsers throw inside SpeechSynthesisUtterance), always fall
+  // through to a visible speaker button — a tap is a real gesture that always works.
+  async function playReply(text: string, speakLang: Lang) {
+    setStatus("speaking");
+    setNeedsTapToHear(false);
+    try {
+      const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, language: speakLang }) });
+      if (!r.ok) throw new Error("tts");
+      const { audioContent } = await r.json();
+      const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
+      pendingAudio.current = audio;
+      pendingUtterance.current = null;
+      audio.onended = () => setStatus("idle");
+      await audio.play();
+    } catch {
+      try {
+        if ("speechSynthesis" in window) {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = speakLang === "es" ? "es-US" : "en-US"; u.rate = 0.9;
+          u.onend = () => setStatus("idle");
+          pendingUtterance.current = u;
+          pendingAudio.current = null;
+          speechSynthesis.cancel(); speechSynthesis.speak(u);
+        }
+      } catch { /* speech synthesis unavailable too — tap-to-hear below still works */ }
+      setNeedsTapToHear(true);
+      setStatus("idle");
+    }
+  }
+
+  function tapToHear() {
+    setNeedsTapToHear(false);
+    if (pendingAudio.current) {
+      setStatus("speaking");
+      pendingAudio.current.play().catch(() => setStatus("idle"));
+    } else if (pendingUtterance.current && "speechSynthesis" in window) {
+      setStatus("speaking");
+      speechSynthesis.cancel();
+      speechSynthesis.speak(pendingUtterance.current);
+    }
+  }
 
   async function turn(input: { audioBase64?: string; mimeType?: string; text?: string }) {
     setBusy(true); setErr(""); setStatus("thinking");
@@ -76,8 +106,7 @@ export default function CareCall({ patient, plan, lang, onEmergency }: {
         addAlert({ level: j.severity, reason: `${patient.name}: ${j.fired.join("; ") || "reported a concerning symptom"}`, createdAt: Date.now(), acknowledgedBy: null });
       }
       if (j.severity === "emergency") onEmergency();
-      setStatus("speaking");
-      speak(j.reply, lang, () => setStatus("idle"));
+      playReply(j.reply, lang);
       if (j.done) await finish();
     } catch (e: any) {
       setErr(e.message || "Something went wrong. Try typing your answer.");
@@ -153,6 +182,13 @@ export default function CareCall({ patient, plan, lang, onEmergency }: {
 
       {severity !== "routine" && (
         <span className={`mt-2 w-fit rounded-full px-3 py-1 text-xs font-bold text-white ${severity === "emergency" ? "bg-crit-600" : "bg-warn-500"}`}>{severity.toUpperCase()}</span>
+      )}
+
+      {needsTapToHear && (
+        <button onClick={tapToHear}
+          className="mt-2 w-fit rounded-full border-2 border-calm-600 bg-calm-50 px-4 py-1.5 text-sm font-bold text-calm-700">
+          {t("tapToHear", lang)}
+        </button>
       )}
 
       <div className="mt-3 flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
