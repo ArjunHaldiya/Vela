@@ -9,10 +9,10 @@ let authReady: Promise<unknown> | null = null;
 export function getDb(): Firestore {
   if (!app) {
     app = getApps()[0] ?? initializeApp({
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      apiKey: "AIzaSyAzAD3T-t_G_8cL-HWKr2ckmJNSWLweb7k",
+      authDomain: "vela-826a6.firebaseapp.com",
+      projectId: "vela-826a6",
+      appId: "1:570616547676:web:43eb3747527b65a003d999",
     });
   }
   if (!db) db = getFirestore(app);
